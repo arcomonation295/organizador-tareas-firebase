@@ -11,6 +11,100 @@ const firebaseConfig = {
     appId: "1:884795326153:web:439aace16855a79fee1718",
     measurementId: "G-6LD1JLYD5V"
 };
+// ... (Tus imports y config de Firebase se mantienen igual arriba) ...
+
+// --- NUEVA LÓGICA: HISTORIAL Y FECHAS ---
+window.showHistory = () => {
+    const historyContent = document.getElementById('historyContent');
+    historyContent.innerHTML = '';
+    
+    const today = new Date().toISOString().split('T')[0];
+    
+    // Filtramos: Tareas completadas O tareas pendientes cuya fecha ya pasó
+    const historicalTasks = tasks.filter(t => t.completed || (t.dueDate && t.dueDate < today));
+
+    if (historicalTasks.length === 0) {
+        historyContent.innerHTML = '<p class="empty-msg">No hay registros antiguos aún.</p>';
+    }
+
+    historicalTasks.forEach(t => {
+        const isExpired = t.dueDate < today && !t.completed;
+        const div = document.createElement('div');
+        div.className = `history-item ${isExpired ? 'expired' : ''}`;
+        div.innerHTML = `
+            <span>${t.text}</span>
+            <small>${isExpired ? '⚠️ VENCIDA' : '✅ FINALIZADA'}</small>
+        `;
+        historyContent.appendChild(div);
+    });
+    
+    document.getElementById('historyModal').style.display = 'flex';
+};
+
+// --- NUEVA LÓGICA: MODO FOCO (POMODORO) ---
+let focusInterval;
+let secondsLeft = 25 * 60;
+
+window.startFocus = (taskName) => {
+    document.getElementById('focusTaskName').textContent = taskName;
+    document.getElementById('focusModal').style.display = 'flex';
+    document.body.style.overflow = 'hidden'; // Bloquea el scroll
+};
+
+document.getElementById('playFocus').onclick = function() {
+    if (focusInterval) {
+        clearInterval(focusInterval);
+        focusInterval = null;
+        this.textContent = '▶';
+    } else {
+        this.textContent = '⏸';
+        focusInterval = setInterval(() => {
+            secondsLeft--;
+            const min = Math.floor(secondsLeft / 60);
+            const sec = secondsLeft % 60;
+            document.getElementById('focusTimer').textContent = `${min}:${sec < 10 ? '0'+sec : sec}`;
+            if (secondsLeft <= 0) {
+                clearInterval(focusInterval);
+                alert("¡Sesión de enfoque terminada! Descansa 5 min.");
+            }
+        }, 1000);
+    }
+};
+
+// --- DRAG AND DROP (SORTABLE) ---
+const el = document.getElementById('taskList');
+Sortable.create(el, {
+    animation: 150,
+    handle: '.drag-handle', // Solo se mueve si agarras del ícono
+    onEnd: function (evt) {
+        console.log("Nuevo orden detectado");
+        // Aquí podrías guardar el nuevo orden en Firestore si añades un campo 'position'
+    }
+});
+
+// --- ACTUALIZACIÓN DEL RENDER PARA INCLUIR ICONOS ---
+// Dentro de tu función render(), actualiza el innerHTML de cada 'li':
+li.innerHTML = `
+    <span class="drag-handle">::</span>
+    <input type="checkbox" ${t.completed ? 'checked' : ''} onchange="toggleTask('${t.id}', ${t.completed})">
+    <div style="flex:1; margin-left:10px;">
+        <strong>${t.text}</strong><br>
+        <small>${t.category} | ${t.dueDate || 'Sin fecha'}</small>
+    </div>
+    <button onclick="startFocus('${t.text}')" class="btn-timer">⏱️</button>
+    <button onclick="deleteTask('${t.id}')" class="btn-del">✕</button>
+`;
+
+// Eventos de botones nuevos
+document.getElementById('historyBtn').onclick = window.showHistory;
+document.getElementById('closeHistory').onclick = () => document.getElementById('historyModal').style.display = 'none';
+document.getElementById('stopFocus').onclick = () => {
+    clearInterval(focusInterval);
+    document.getElementById('focusModal').style.display = 'none';
+    document.body.style.overflow = 'auto';
+    secondsLeft = 25 * 60;
+    document.getElementById('focusTimer').textContent = "25:00";
+};
 
 // Inicialización
 const app = initializeApp(firebaseConfig);
