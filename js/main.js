@@ -12,7 +12,6 @@ const firebaseConfig = {
     measurementId: "G-6LD1JLYD5V"
 };
 
-// Inicialización
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const auth = getAuth(app);
@@ -23,33 +22,22 @@ let isGuest = false;
 let tasks = [];
 let currentFilter = 'all';
 
-// --- ELEMENTOS DEL DOM ---
+// --- ELEMENTOS ---
 const taskList = document.getElementById('taskList');
 const progressCircle = document.getElementById('progressCircle');
 const progressText = document.getElementById('progressText');
 const themeToggle = document.getElementById('themeToggle');
 
-// --- FECHA Y RELOJ ---
-const dateDisplay = document.getElementById('dateDisplay');
-if(dateDisplay) {
-    dateDisplay.textContent = new Date().toLocaleDateString('es-PE', { weekday: 'long', day: 'numeric', month: 'long' });
-}
-
-// --- LOGICA DE ACCESO (AUTH) ---
-window.login = () => signInWithPopup(auth, provider).catch(err => {
-    console.error("Error de login:", err);
-    alert("Error al conectar con Google. Revisa la consola (F12).");
-});
-
+// --- LÓGICA DE ACCESO ---
+window.login = () => signInWithPopup(auth, provider).catch(err => alert("Error: " + err.message));
 window.enterGuest = () => {
     isGuest = true;
-    currentUser = { uid: 'guest', displayName: 'Invitado' };
+    currentUser = { uid: 'guest' };
     document.getElementById('authScreen').style.display = 'none';
     document.getElementById('appContainer').style.display = 'block';
-    document.getElementById('userNameDisplay').textContent = "Modo Invitado";
+    document.getElementById('userNameDisplay').textContent = "Invitado";
     render();
 };
-
 window.logout = () => signOut(auth).then(() => location.reload());
 
 onAuthStateChanged(auth, user => {
@@ -59,37 +47,34 @@ onAuthStateChanged(auth, user => {
         document.getElementById('authScreen').style.display = 'none';
         document.getElementById('appContainer').style.display = 'block';
         document.getElementById('userNameDisplay').textContent = `Hola, ${user.displayName.split(' ')[0]}`;
-        listenTasks();
+        listenTasks(); // ¡AQUÍ SE ACTIVA!
     }
 });
 
-// --- ESCUCHAR TAREAS (FIREBASE) ---
+// --- EL "ESCUCHADOR" DE TAREAS CORREGIDO ---
 function listenTasks() {
-    // Si sale error aquí, haz clic en el link que saldrá en la consola de F12
-    const q = query(
-        collection(db, "tareas"), 
-        where("userId", "==", currentUser.uid), 
-        orderBy("createdAt", "desc")
-    );
+    console.log("Escuchando tareas para:", currentUser.uid);
+    // QUITAMOS el orderBy temporalmente para que NO pida índice y funcione YA
+    const q = query(collection(db, "tareas"), where("userId", "==", currentUser.uid));
 
     onSnapshot(q, (snap) => {
         tasks = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        // Ordenamos en el cliente para que no falle la base de datos
+        tasks.sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
         render();
     }, (error) => {
         console.error("Error en Firestore:", error);
-        if(error.code === 'failed-precondition') {
-            console.warn("⚠️ FALTA CREAR EL ÍNDICE. Mira el link arriba.");
-        }
+        alert("Falla de conexión: Mira la consola con F12");
     });
 }
 
-// --- CRUD DE TAREAS ---
+// --- CRUD ---
 window.addTask = async () => {
     const input = document.getElementById('taskInput');
     const val = input.value.trim();
     if (!val) return;
 
-    const taskData = {
+    const data = {
         text: val,
         priority: document.getElementById('priorityInput').value,
         category: document.getElementById('categoryInput').value,
@@ -99,12 +84,8 @@ window.addTask = async () => {
         createdAt: isGuest ? Date.now() : serverTimestamp()
     };
 
-    if (isGuest) {
-        tasks.unshift({ id: Date.now().toString(), ...taskData });
-        render();
-    } else {
-        await addDoc(collection(db, "tareas"), taskData);
-    }
+    if (isGuest) { tasks.unshift({id: Date.now().toString(), ...data}); render(); }
+    else { await addDoc(collection(db, "tareas"), data); }
     input.value = '';
 };
 
@@ -119,21 +100,17 @@ window.toggleTask = async (id, status) => {
 };
 
 window.deleteTask = async (id) => {
-    if (!confirm("¿Borrar esta tarea?")) return;
-    if (isGuest) {
-        tasks = tasks.filter(t => t.id !== id);
-        render();
-    } else {
-        await deleteDoc(doc(db, "tareas", id));
-    }
+    if (!confirm("¿Borrar?")) return;
+    if (isGuest) { tasks = tasks.filter(t => t.id !== id); render(); }
+    else { await deleteDoc(doc(db, "tareas", id)); }
 };
 
-// --- RENDERIZADO Y PROGRESO ---
+// --- RENDER Y PROGRESO ---
 function render() {
     taskList.innerHTML = '';
     const filtered = tasks.filter(t => {
-        if (currentFilter === 'pending') return t.completed === false;
-        if (currentFilter === 'completed') return t.completed === true;
+        if (currentFilter === 'pending') return !t.completed;
+        if (currentFilter === 'completed') return t.completed;
         return true;
     });
 
@@ -145,15 +122,13 @@ function render() {
             <input type="checkbox" ${t.completed ? 'checked' : ''} onchange="toggleTask('${t.id}', ${t.completed})">
             <div style="flex:1; margin-left:10px;">
                 <strong>${t.text}</strong><br>
-                <small>${t.category} | ${t.dueDate || 'Sin fecha'}</small>
+                <small>${t.category} | ${t.dueDate || 'Hoy'}</small>
             </div>
             <button onclick="deleteTask('${t.id}')" style="background:none; border:none; color:red; cursor:pointer;">✕</button>
         `;
         taskList.appendChild(li);
     });
-    
     updateProgress();
-    document.getElementById('emptyState').style.display = filtered.length === 0 ? 'block' : 'none';
 }
 
 function updateProgress() {
@@ -163,21 +138,14 @@ function updateProgress() {
     
     if(progressCircle) {
         const radius = 24;
-        const circum = 2 * Math.PI * radius;
-        progressCircle.style.strokeDasharray = circum;
-        progressCircle.style.strokeDashoffset = circum - (percent / 100) * circum;
+        const circum = $2 \times \pi \times radius$; // Circunferencia del SVG
+        progressCircle.style.strokeDasharray = 150.8; // Valor fijo para r=24
+        progressCircle.style.strokeDashoffset = 150.8 - (percent / 100) * 150.8;
     }
     if(progressText) progressText.textContent = `${percent}%`;
 }
 
-// --- MODAL Y TEMAS ---
-window.setFilter = (filter, btn) => {
-    currentFilter = filter;
-    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
-    render();
-};
-
+// --- TEMA Y FILTROS ---
 themeToggle.onclick = () => {
     const current = document.documentElement.getAttribute('data-theme');
     const next = current === 'dark' ? 'light' : 'dark';
@@ -186,17 +154,22 @@ themeToggle.onclick = () => {
     themeToggle.textContent = next === 'dark' ? '☀️' : '🌙';
 };
 
-// Inicializar Tema al cargar
+// Cargar tema guardado
 const savedTheme = localStorage.getItem('app_theme') || 'light';
 document.documentElement.setAttribute('data-theme', savedTheme);
 themeToggle.textContent = savedTheme === 'dark' ? '☀️' : '🌙';
 
-// Asignar eventos de botones
+// Asignación de botones (Asegúrate de que los IDs coincidan en el HTML)
 document.getElementById('googleLoginBtn').onclick = window.login;
 document.getElementById('guestBtn').onclick = window.enterGuest;
 document.getElementById('logoutBtn').onclick = window.logout;
 document.getElementById('addBtn').onclick = window.addTask;
 
 document.querySelectorAll('.filter-btn').forEach(btn => {
-    btn.onclick = () => window.setFilter(btn.dataset.filter, btn);
+    btn.onclick = () => {
+        document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        currentFilter = btn.dataset.filter;
+        render();
+    };
 });
