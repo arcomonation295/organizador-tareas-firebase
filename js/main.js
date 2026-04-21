@@ -12,6 +12,7 @@ const firebaseConfig = {
     measurementId: "G-6LD1JLYD5V"
 };
 
+// Inicialización
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const auth = getAuth(app);
@@ -22,69 +23,117 @@ let isGuest = false;
 let tasks = [];
 let currentFilter = 'all';
 
-// --- ELEMENTOS ---
+// --- ELEMENTOS DEL DOM ---
 const taskList = document.getElementById('taskList');
 const progressCircle = document.getElementById('progressCircle');
 const progressText = document.getElementById('progressText');
+const themeToggle = document.getElementById('themeToggle');
 
-// --- AUTH ---
-window.login = () => signInWithPopup(auth, provider).catch(err => alert("Error: Autoriza el dominio en Firebase Console."));
-window.enterGuest = () => { isGuest = true; updateUI(); render(); };
+// --- FECHA Y RELOJ ---
+const dateDisplay = document.getElementById('dateDisplay');
+if(dateDisplay) {
+    dateDisplay.textContent = new Date().toLocaleDateString('es-PE', { weekday: 'long', day: 'numeric', month: 'long' });
+}
+
+// --- LOGICA DE ACCESO (AUTH) ---
+window.login = () => signInWithPopup(auth, provider).catch(err => {
+    console.error("Error de login:", err);
+    alert("Error al conectar con Google. Revisa la consola (F12).");
+});
+
+window.enterGuest = () => {
+    isGuest = true;
+    currentUser = { uid: 'guest', displayName: 'Invitado' };
+    document.getElementById('authScreen').style.display = 'none';
+    document.getElementById('appContainer').style.display = 'block';
+    document.getElementById('userNameDisplay').textContent = "Modo Invitado";
+    render();
+};
+
 window.logout = () => signOut(auth).then(() => location.reload());
 
 onAuthStateChanged(auth, user => {
-    if (user) { currentUser = user; isGuest = false; updateUI(); listenTasks(); }
+    if (user) {
+        currentUser = user;
+        isGuest = false;
+        document.getElementById('authScreen').style.display = 'none';
+        document.getElementById('appContainer').style.display = 'block';
+        document.getElementById('userNameDisplay').textContent = `Hola, ${user.displayName.split(' ')[0]}`;
+        listenTasks();
+    }
 });
 
-function updateUI() {
-    document.getElementById('authScreen').style.display = 'none';
-    document.getElementById('appContainer').style.display = 'block';
-    document.getElementById('userNameDisplay').textContent = isGuest ? "Invitado" : `Hola, ${currentUser.displayName.split(' ')[0]}`;
-}
-
-// --- TAREAS ---
+// --- ESCUCHAR TAREAS (FIREBASE) ---
 function listenTasks() {
-    const q = query(collection(db, "tareas"), where("userId", "==", currentUser.uid), orderBy("createdAt", "desc"));
-    onSnapshot(q, snap => {
+    // Si sale error aquí, haz clic en el link que saldrá en la consola de F12
+    const q = query(
+        collection(db, "tareas"), 
+        where("userId", "==", currentUser.uid), 
+        orderBy("createdAt", "desc")
+    );
+
+    onSnapshot(q, (snap) => {
         tasks = snap.docs.map(d => ({ id: d.id, ...d.data() }));
         render();
+    }, (error) => {
+        console.error("Error en Firestore:", error);
+        if(error.code === 'failed-precondition') {
+            console.warn("⚠️ FALTA CREAR EL ÍNDICE. Mira el link arriba.");
+        }
     });
 }
 
+// --- CRUD DE TAREAS ---
 window.addTask = async () => {
-    const val = document.getElementById('taskInput').value;
+    const input = document.getElementById('taskInput');
+    const val = input.value.trim();
     if (!val) return;
+
     const taskData = {
         text: val,
         priority: document.getElementById('priorityInput').value,
         category: document.getElementById('categoryInput').value,
         dueDate: document.getElementById('dateInput').value,
         completed: false,
-        userId: isGuest ? 'guest' : currentUser.uid,
+        userId: currentUser.uid,
         createdAt: isGuest ? Date.now() : serverTimestamp()
     };
-    if (isGuest) { tasks.unshift({id: Date.now().toString(), ...taskData}); render(); }
-    else { await addDoc(collection(db, "tareas"), taskData); }
-    document.getElementById('taskInput').value = '';
+
+    if (isGuest) {
+        tasks.unshift({ id: Date.now().toString(), ...taskData });
+        render();
+    } else {
+        await addDoc(collection(db, "tareas"), taskData);
+    }
+    input.value = '';
 };
 
 window.toggleTask = async (id, status) => {
-    if (isGuest) { tasks.find(t => t.id === id).completed = !status; render(); }
-    else { await updateDoc(doc(db, "tareas", id), { completed: !status }); }
+    if (isGuest) {
+        const t = tasks.find(x => x.id === id);
+        if(t) t.completed = !status;
+        render();
+    } else {
+        await updateDoc(doc(db, "tareas", id), { completed: !status });
+    }
 };
 
 window.deleteTask = async (id) => {
-    if (!confirm("¿Borrar?")) return;
-    if (isGuest) { tasks = tasks.filter(t => t.id !== id); render(); }
-    else { await deleteDoc(doc(db, "tareas", id)); }
+    if (!confirm("¿Borrar esta tarea?")) return;
+    if (isGuest) {
+        tasks = tasks.filter(t => t.id !== id);
+        render();
+    } else {
+        await deleteDoc(doc(db, "tareas", id));
+    }
 };
 
-// --- RENDER & GRÁFICO ---
+// --- RENDERIZADO Y PROGRESO ---
 function render() {
     taskList.innerHTML = '';
     const filtered = tasks.filter(t => {
-        if (currentFilter === 'pending') return !t.completed;
-        if (currentFilter === 'completed') return t.completed;
+        if (currentFilter === 'pending') return t.completed === false;
+        if (currentFilter === 'completed') return t.completed === true;
         return true;
     });
 
@@ -93,16 +142,18 @@ function render() {
         li.className = `task-item ${t.completed ? 'is-completed' : ''}`;
         li.dataset.priority = t.priority;
         li.innerHTML = `
-            <input type="checkbox" ${t.completed ? 'checked' : ''} onclick="toggleTask('${t.id}', ${t.completed})">
-            <div style="flex:1">
+            <input type="checkbox" ${t.completed ? 'checked' : ''} onchange="toggleTask('${t.id}', ${t.completed})">
+            <div style="flex:1; margin-left:10px;">
                 <strong>${t.text}</strong><br>
                 <small>${t.category} | ${t.dueDate || 'Sin fecha'}</small>
             </div>
-            <button onclick="deleteTask('${t.id}')">✕</button>
+            <button onclick="deleteTask('${t.id}')" style="background:none; border:none; color:red; cursor:pointer;">✕</button>
         `;
         taskList.appendChild(li);
     });
+    
     updateProgress();
+    document.getElementById('emptyState').style.display = filtered.length === 0 ? 'block' : 'none';
 }
 
 function updateProgress() {
@@ -110,24 +161,42 @@ function updateProgress() {
     const done = tasks.filter(t => t.completed).length;
     const percent = total === 0 ? 0 : Math.round((done / total) * 100);
     
-    const radius = 24;
-    const circum = 2 * Math.PI * radius;
-    progressCircle.style.strokeDasharray = circum;
-    progressCircle.style.strokeDashoffset = circum - (percent / 100) * circum;
-    progressText.textContent = `${percent}%`;
+    if(progressCircle) {
+        const radius = 24;
+        const circum = 2 * Math.PI * radius;
+        progressCircle.style.strokeDasharray = circum;
+        progressCircle.style.strokeDashoffset = circum - (percent / 100) * circum;
+    }
+    if(progressText) progressText.textContent = `${percent}%`;
 }
 
-// --- EVENTOS ---
+// --- MODAL Y TEMAS ---
+window.setFilter = (filter, btn) => {
+    currentFilter = filter;
+    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    render();
+};
+
+themeToggle.onclick = () => {
+    const current = document.documentElement.getAttribute('data-theme');
+    const next = current === 'dark' ? 'light' : 'dark';
+    document.documentElement.setAttribute('data-theme', next);
+    localStorage.setItem('app_theme', next);
+    themeToggle.textContent = next === 'dark' ? '☀️' : '🌙';
+};
+
+// Inicializar Tema al cargar
+const savedTheme = localStorage.getItem('app_theme') || 'light';
+document.documentElement.setAttribute('data-theme', savedTheme);
+themeToggle.textContent = savedTheme === 'dark' ? '☀️' : '🌙';
+
+// Asignar eventos de botones
 document.getElementById('googleLoginBtn').onclick = window.login;
 document.getElementById('guestBtn').onclick = window.enterGuest;
 document.getElementById('logoutBtn').onclick = window.logout;
 document.getElementById('addBtn').onclick = window.addTask;
 
 document.querySelectorAll('.filter-btn').forEach(btn => {
-    btn.onclick = (e) => {
-        document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
-        e.target.classList.add('active');
-        currentFilter = e.target.dataset.filter;
-        render();
-    };
+    btn.onclick = () => window.setFilter(btn.dataset.filter, btn);
 });
