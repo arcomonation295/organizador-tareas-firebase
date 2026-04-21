@@ -1,63 +1,44 @@
 :root[data-theme="light"] {
-    --bg: #F8F9FA; 
-    --card: #FFFFFF; 
-    --text: #2D3436; 
-    --accent: #6C5CE7;
-    --border: #DFE6E9;
+    --bg: #F8F9FA; --card: #FFFFFF; --text: #2D3436; --accent: #6C5CE7;
+    --border: #DFE6E9; --danger: #D63031; --success: #00B894;
 }
-
 :root[data-theme="dark"] {
-    --bg: #121212; 
-    --card: #1E1E1E; 
-    --text: #E0E0E0; 
-    --accent: #A29BFE;
-    --border: #333333;
+    --bg: #121212; --card: #1E1E1E; --text: #E0E0E0; --accent: #A29BFE;
+    --border: #333333; --danger: #FF7675; --success: #55EFC4;
 }
 
-body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); margin: 0; transition: 0.3s; }
+body { font-family: 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); margin: 0; transition: 0.3s; }
 
+/* Auth Screen */
 .auth-overlay { position: fixed; inset: 0; background: var(--bg); display: flex; align-items: center; justify-content: center; z-index: 1000; }
-.auth-card { background: var(--card); padding: 40px; border-radius: 24px; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.1); max-width: 350px; }
-.auth-buttons { display: flex; flex-direction: column; gap: 10px; margin-top: 20px; }
-.btn-google { background: var(--accent); color: white; border: none; padding: 12px; border-radius: 12px; cursor: pointer; font-weight: bold; }
-.btn-guest { background: var(--border); color: var(--text); border: none; padding: 12px; border-radius: 12px; cursor: pointer; }
-.app-container, .auth-card, .input-card, .task-item {
-    background-color: var(--card);
-    color: var(--text);
-    border-color: var(--border);
-}
-.app-container { max-width: 500px; margin: 40px auto; padding: 20px; }
-.header-section { display: flex; justify-content: space-between; align-items: center; }
-.header-widgets { display: flex; align-items: center; gap: 15px; }
+.auth-card { background: var(--card); padding: 40px; border-radius: 25px; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.1); width: 90%; max-width: 350px; }
+.btn-google { background: var(--accent); color: white; border: none; padding: 12px; border-radius: 12px; cursor: pointer; width: 100%; font-weight: bold; margin-bottom: 10px; }
+.btn-guest { background: var(--border); color: var(--text); border: none; padding: 12px; border-radius: 12px; cursor: pointer; width: 100%; }
 
-/* GRAFICO DE PROGRESO */
+/* App UI */
+.app-container { max-width: 450px; margin: 40px auto; padding: 20px; }
+.header-section { display: flex; justify-content: space-between; margin-bottom: 30px; }
+.header-controls { display: flex; align-items: center; gap: 15px; }
+
+/* Gráfico de Progreso */
 .progress-box { position: relative; display: flex; align-items: center; justify-content: center; }
-.progress-ring__circle-bg { stroke: var(--border); }
-.progress-ring__circle { 
-    stroke: var(--success); 
-    stroke-linecap: round; 
-    transition: stroke-dashoffset 0.35s; 
-    transform: rotate(-90deg); 
-    transform-origin: 50% 50%; 
-}
-#progressText { position: absolute; font-size: 10px; font-weight: bold; }
+.ring-bg { stroke: var(--border); }
+.ring-active { stroke: var(--success); stroke-linecap: round; transform: rotate(-90deg); transform-origin: center; transition: 0.5s; }
+#progressText { position: absolute; font-size: 11px; font-weight: bold; }
 
-.input-card { background: var(--card); padding: 20px; border-radius: 16px; margin: 20px 0; border: 1px solid var(--border); }
-.input-group { display: flex; gap: 10px; }
+.input-section { background: var(--card); padding: 15px; border-radius: 15px; border: 1px solid var(--border); margin-bottom: 20px; }
+.input-row { display: flex; gap: 10px; margin-bottom: 10px; }
 input, select { flex: 1; padding: 10px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg); color: var(--text); }
-.btn-add { background: var(--accent); color: white; border: none; width: 40px; border-radius: 8px; cursor: pointer; }
+.btn-add { background: var(--accent); color: white; border: none; width: 45px; border-radius: 8px; cursor: pointer; font-size: 20px; }
 
-.filter-bar { display: flex; gap: 5px; margin-bottom: 20px; }
-.filter-btn { flex: 1; padding: 8px; border: none; border-radius: 8px; background: var(--border); color: var(--text); cursor: pointer; }
+.filters { display: flex; gap: 5px; margin-bottom: 20px; }
+.filter-btn { flex: 1; padding: 8px; border: none; border-radius: 8px; background: var(--border); color: var(--text); cursor: pointer; font-weight: bold; }
 .filter-btn.active { background: var(--accent); color: white; }
 
-.task-list { list-style: none; padding: 0; }
-.task-item { 
-    background: var(--card); padding: 15px; border-radius: 12px; margin-bottom: 10px;
-    display: flex; align-items: center; gap: 12px; border-left: 5px solid transparent;
-}
+/* Tareas */
+#taskList { list-style: none; padding: 0; }
+.task-item { background: var(--card); padding: 15px; border-radius: 12px; margin-bottom: 10px; display: flex; align-items: center; gap: 12px; border-left: 5px solid transparent; }
 .task-item[data-priority="alta"] { border-left-color: var(--danger); }
-.task-item[data-priority="media"] { border-left-color: #FDCB6E; }
+.task-item[data-priority="media"] { border-left-color: #f1c40f; }
 .task-item[data-priority="baja"] { border-left-color: var(--success); }
-
 .is-completed { opacity: 0.5; text-decoration: line-through; }
