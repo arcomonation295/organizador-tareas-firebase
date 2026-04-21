@@ -40,5 +40,27 @@ input, select { flex: 1; padding: 10px; border-radius: 8px; border: 1px solid va
 .task-item { background: var(--card); padding: 15px; border-radius: 12px; margin-bottom: 10px; display: flex; align-items: center; gap: 12px; border-left: 5px solid transparent; }
 .task-item[data-priority="alta"] { border-left-color: var(--danger); }
 .task-item[data-priority="media"] { border-left-color: #f1c40f; }
+/* Estilo del Historial */
+.history-item { 
+    display: flex; justify-content: space-between; padding: 10px; 
+    border-bottom: 1px solid var(--border); 
+}
+.history-item.expired { color: var(--danger); font-weight: bold; }
+
+/* Modo Enfoque */
+.focus-card {
+    background: #000; color: #fff; width: 100vw; height: 100vh;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    animation: fadeIn 0.5s;
+}
+.timer-huge { font-size: 8rem; font-weight: 800; font-variant-numeric: tabular-nums; }
+.pulse-icon { color: red; animation: pulse 1.5s infinite; }
+
+@keyframes pulse { 
+    0% { opacity: 1; } 50% { opacity: 0.3; } 100% { opacity: 1; } 
+}
+
+.drag-handle { cursor: grab; color: var(--border); font-weight: bold; margin-right: 5px; }
+.drag-handle:active { cursor: grabbing; }
 .task-item[data-priority="baja"] { border-left-color: var(--success); }
 .is-completed { opacity: 0.5; text-decoration: line-through; }
