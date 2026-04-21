@@ -1,10 +1,17 @@
 :root[data-theme="light"] {
-    --bg: #F8F9FA; --card: #FFFFFF; --text: #2D3436; --accent: #6C5CE7;
-    --border: #DFE6E9; --danger: #FF7675; --success: #55EFC4;
+    --bg: #F8F9FA; 
+    --card: #FFFFFF; 
+    --text: #2D3436; 
+    --accent: #6C5CE7;
+    --border: #DFE6E9;
 }
+
 :root[data-theme="dark"] {
-    --bg: #121212; --card: #1E1E1E; --text: #E0E0E0; --accent: #A29BFE;
-    --border: #333333; --danger: #FF7675; --success: #55EFC4;
+    --bg: #121212; 
+    --card: #1E1E1E; 
+    --text: #E0E0E0; 
+    --accent: #A29BFE;
+    --border: #333333;
 }
 
 body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); margin: 0; transition: 0.3s; }
@@ -14,7 +21,11 @@ body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--tex
 .auth-buttons { display: flex; flex-direction: column; gap: 10px; margin-top: 20px; }
 .btn-google { background: var(--accent); color: white; border: none; padding: 12px; border-radius: 12px; cursor: pointer; font-weight: bold; }
 .btn-guest { background: var(--border); color: var(--text); border: none; padding: 12px; border-radius: 12px; cursor: pointer; }
-
+.app-container, .auth-card, .input-card, .task-item {
+    background-color: var(--card);
+    color: var(--text);
+    border-color: var(--border);
+}
 .app-container { max-width: 500px; margin: 40px auto; padding: 20px; }
 .header-section { display: flex; justify-content: space-between; align-items: center; }
 .header-widgets { display: flex; align-items: center; gap: 15px; }
