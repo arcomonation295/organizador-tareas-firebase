@@ -1,0 +1,55 @@
+:root[data-theme="light"] {
+    --bg-color: #FDFBF7; --card-bg: #FFFFFF; --text-main: #3C3633;
+    --text-muted: #8E8279; --accent-color: #A78B71; --border: #EEE9E2;
+    --danger: #D67D67; --filter-bg: #F7F3EE;
+}
+:root[data-theme="dark"] {
+    --bg-color: #161412; --card-bg: #23201D; --text-main: #EAE6E1;
+    --text-muted: #9E9388; --accent-color: #C2A385; --border: #3A3530;
+    --danger: #E28873; --filter-bg: #2E2A26;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Segoe UI', sans-serif; background-color: var(--bg-color); color: var(--text-main); transition: 0.3s; }
+
+/* Estilos de Auth */
+.auth-overlay {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: var(--bg-color); display: flex; align-items: center; justify-content: center; z-index: 3000;
+}
+.auth-card {
+    background: var(--card-bg); padding: 40px; border-radius: 30px;
+    text-align: center; max-width: 400px; width: 90%; box-shadow: 0 20px 50px rgba(0,0,0,0.05);
+}
+.auth-icon { font-size: 3rem; margin-bottom: 20px; }
+.auth-buttons { display: flex; flex-direction: column; gap: 12px; margin: 30px 0; }
+.btn-google { background: var(--text-main); color: white; border: none; padding: 15px; border-radius: 15px; font-weight: 600; cursor: pointer; }
+.btn-guest { background: var(--filter-bg); color: var(--text-main); border: none; padding: 15px; border-radius: 15px; font-weight: 600; cursor: pointer; }
+
+/* App Layout */
+.app-container { max-width: 440px; margin: 40px auto; background: var(--card-bg); padding: 32px; border-radius: 28px; box-shadow: 0 10px 30px rgba(0,0,0,0.05); }
+.header-section { display: flex; justify-content: space-between; margin-bottom: 25px; }
+.logout-link { background: none; border: none; color: var(--danger); cursor: pointer; font-size: 0.8rem; margin-top: 5px; }
+
+.input-section { display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px; }
+.input-row { display: flex; gap: 10px; }
+input, select { width: 100%; padding: 12px; border-radius: 12px; border: 1.5px solid var(--border); background: var(--bg-color); color: var(--text-main); }
+
+.filters { display: flex; gap: 5px; background: var(--filter-bg); padding: 5px; border-radius: 12px; margin-bottom: 20px; }
+.filter-btn { flex: 1; border: none; background: transparent; padding: 8px; border-radius: 8px; cursor: pointer; color: var(--text-muted); font-weight: 600; }
+.filter-btn.active { background: var(--card-bg); color: var(--text-main); box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+
+/* Lista de Tareas con Prioridad */
+ul { list-style: none; display: flex; flex-direction: column; gap: 10px; }
+li { display: flex; align-items: center; padding: 15px; border-radius: 15px; border: 1px solid var(--border); background: var(--card-bg); position: relative; overflow: hidden; }
+li::before { content: ''; position: absolute; left: 0; top: 0; width: 4px; height: 100%; }
+li[data-priority="alta"]::before { background: #D67D67; }
+li[data-priority="media"]::before { background: #E9C46A; }
+li[data-priority="baja"]::before { background: #8AB17D; }
+
+.is-completed { opacity: 0.5; text-decoration: line-through; }
+
+/* Pomodoro */
+.modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 2000; }
+.pomodoro-card { background: var(--card-bg); padding: 40px; border-radius: 25px; text-align: center; width: 90%; max-width: 350px; }
+.timer-display { font-size: 4rem; font-weight: 800; margin: 20px 0; }
