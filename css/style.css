@@ -1,55 +1,52 @@
 :root[data-theme="light"] {
-    --bg-color: #FDFBF7; --card-bg: #FFFFFF; --text-main: #3C3633;
-    --text-muted: #8E8279; --accent-color: #A78B71; --border: #EEE9E2;
-    --danger: #D67D67; --filter-bg: #F7F3EE;
+    --bg: #F8F9FA; --card: #FFFFFF; --text: #2D3436; --accent: #6C5CE7;
+    --border: #DFE6E9; --danger: #FF7675; --success: #55EFC4;
 }
 :root[data-theme="dark"] {
-    --bg-color: #161412; --card-bg: #23201D; --text-main: #EAE6E1;
-    --text-muted: #9E9388; --accent-color: #C2A385; --border: #3A3530;
-    --danger: #E28873; --filter-bg: #2E2A26;
+    --bg: #121212; --card: #1E1E1E; --text: #E0E0E0; --accent: #A29BFE;
+    --border: #333333; --danger: #FF7675; --success: #55EFC4;
 }
 
-* { box-sizing: border-box; margin: 0; padding: 0; }
-body { font-family: 'Segoe UI', sans-serif; background-color: var(--bg-color); color: var(--text-main); transition: 0.3s; }
+body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); margin: 0; transition: 0.3s; }
 
-/* Estilos de Auth */
-.auth-overlay {
-    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-    background: var(--bg-color); display: flex; align-items: center; justify-content: center; z-index: 3000;
+.auth-overlay { position: fixed; inset: 0; background: var(--bg); display: flex; align-items: center; justify-content: center; z-index: 1000; }
+.auth-card { background: var(--card); padding: 40px; border-radius: 24px; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.1); max-width: 350px; }
+.auth-buttons { display: flex; flex-direction: column; gap: 10px; margin-top: 20px; }
+.btn-google { background: var(--accent); color: white; border: none; padding: 12px; border-radius: 12px; cursor: pointer; font-weight: bold; }
+.btn-guest { background: var(--border); color: var(--text); border: none; padding: 12px; border-radius: 12px; cursor: pointer; }
+
+.app-container { max-width: 500px; margin: 40px auto; padding: 20px; }
+.header-section { display: flex; justify-content: space-between; align-items: center; }
+.header-widgets { display: flex; align-items: center; gap: 15px; }
+
+/* GRAFICO DE PROGRESO */
+.progress-box { position: relative; display: flex; align-items: center; justify-content: center; }
+.progress-ring__circle-bg { stroke: var(--border); }
+.progress-ring__circle { 
+    stroke: var(--success); 
+    stroke-linecap: round; 
+    transition: stroke-dashoffset 0.35s; 
+    transform: rotate(-90deg); 
+    transform-origin: 50% 50%; 
 }
-.auth-card {
-    background: var(--card-bg); padding: 40px; border-radius: 30px;
-    text-align: center; max-width: 400px; width: 90%; box-shadow: 0 20px 50px rgba(0,0,0,0.05);
+#progressText { position: absolute; font-size: 10px; font-weight: bold; }
+
+.input-card { background: var(--card); padding: 20px; border-radius: 16px; margin: 20px 0; border: 1px solid var(--border); }
+.input-group { display: flex; gap: 10px; }
+input, select { flex: 1; padding: 10px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg); color: var(--text); }
+.btn-add { background: var(--accent); color: white; border: none; width: 40px; border-radius: 8px; cursor: pointer; }
+
+.filter-bar { display: flex; gap: 5px; margin-bottom: 20px; }
+.filter-btn { flex: 1; padding: 8px; border: none; border-radius: 8px; background: var(--border); color: var(--text); cursor: pointer; }
+.filter-btn.active { background: var(--accent); color: white; }
+
+.task-list { list-style: none; padding: 0; }
+.task-item { 
+    background: var(--card); padding: 15px; border-radius: 12px; margin-bottom: 10px;
+    display: flex; align-items: center; gap: 12px; border-left: 5px solid transparent;
 }
-.auth-icon { font-size: 3rem; margin-bottom: 20px; }
-.auth-buttons { display: flex; flex-direction: column; gap: 12px; margin: 30px 0; }
-.btn-google { background: var(--text-main); color: white; border: none; padding: 15px; border-radius: 15px; font-weight: 600; cursor: pointer; }
-.btn-guest { background: var(--filter-bg); color: var(--text-main); border: none; padding: 15px; border-radius: 15px; font-weight: 600; cursor: pointer; }
-
-/* App Layout */
-.app-container { max-width: 440px; margin: 40px auto; background: var(--card-bg); padding: 32px; border-radius: 28px; box-shadow: 0 10px 30px rgba(0,0,0,0.05); }
-.header-section { display: flex; justify-content: space-between; margin-bottom: 25px; }
-.logout-link { background: none; border: none; color: var(--danger); cursor: pointer; font-size: 0.8rem; margin-top: 5px; }
-
-.input-section { display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px; }
-.input-row { display: flex; gap: 10px; }
-input, select { width: 100%; padding: 12px; border-radius: 12px; border: 1.5px solid var(--border); background: var(--bg-color); color: var(--text-main); }
-
-.filters { display: flex; gap: 5px; background: var(--filter-bg); padding: 5px; border-radius: 12px; margin-bottom: 20px; }
-.filter-btn { flex: 1; border: none; background: transparent; padding: 8px; border-radius: 8px; cursor: pointer; color: var(--text-muted); font-weight: 600; }
-.filter-btn.active { background: var(--card-bg); color: var(--text-main); box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
-
-/* Lista de Tareas con Prioridad */
-ul { list-style: none; display: flex; flex-direction: column; gap: 10px; }
-li { display: flex; align-items: center; padding: 15px; border-radius: 15px; border: 1px solid var(--border); background: var(--card-bg); position: relative; overflow: hidden; }
-li::before { content: ''; position: absolute; left: 0; top: 0; width: 4px; height: 100%; }
-li[data-priority="alta"]::before { background: #D67D67; }
-li[data-priority="media"]::before { background: #E9C46A; }
-li[data-priority="baja"]::before { background: #8AB17D; }
+.task-item[data-priority="alta"] { border-left-color: var(--danger); }
+.task-item[data-priority="media"] { border-left-color: #FDCB6E; }
+.task-item[data-priority="baja"] { border-left-color: var(--success); }
 
 .is-completed { opacity: 0.5; text-decoration: line-through; }
-
-/* Pomodoro */
-.modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 2000; }
-.pomodoro-card { background: var(--card-bg); padding: 40px; border-radius: 25px; text-align: center; width: 90%; max-width: 350px; }
-.timer-display { font-size: 4rem; font-weight: 800; margin: 20px 0; }
