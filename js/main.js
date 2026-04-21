@@ -12,161 +12,117 @@ const firebaseConfig = {
     measurementId: "G-6LD1JLYD5V"
 };
 
-// Inicialización
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const auth = getAuth(app);
 const provider = new GoogleAuthProvider();
 
-// Variables de Estado
 let currentUser = null;
-let isGuestMode = false;
-let allTasks = [];
-let guestTasks = JSON.parse(localStorage.getItem('guest_tasks')) || []; // Para que no se borren al refrescar en modo invitado
+let isGuest = false;
+let tasks = [];
 let currentFilter = 'all';
-let unsubscribeTasks = null;
 
-// Elementos DOM
-const authScreen = document.getElementById('authScreen');
-const appContainer = document.getElementById('appContainer');
+// --- ELEMENTOS ---
 const taskList = document.getElementById('taskList');
-const taskInput = document.getElementById('taskInput');
+const progressCircle = document.getElementById('progressCircle');
+const progressText = document.getElementById('progressText');
 
-// --- 1. LÓGICA DE ACCESO ---
+// --- AUTH ---
+window.login = () => signInWithPopup(auth, provider).catch(err => alert("Error: Autoriza el dominio en Firebase Console."));
+window.enterGuest = () => { isGuest = true; updateUI(); render(); };
+window.logout = () => signOut(auth).then(() => location.reload());
 
-window.loginWithGoogle = async () => {
-    try {
-        await signInWithPopup(auth, provider);
-    } catch (error) {
-        console.error("Error en login:", error);
-        alert("Asegúrate de haber autorizado el dominio en Firebase Console.");
-    }
-};
-
-window.enterAsGuest = () => {
-    isGuestMode = true;
-    authScreen.style.display = 'none';
-    appContainer.style.display = 'block';
-    document.getElementById('userNameDisplay').textContent = "Modo Invitado";
-    render();
-};
-
-window.logout = () => {
-    signOut(auth).then(() => location.reload());
-};
-
-// Vincular botones de la pantalla de inicio
-document.getElementById('googleLoginBtn').onclick = window.loginWithGoogle;
-document.getElementById('guestBtn').onclick = window.enterAsGuest;
-document.getElementById('logoutBtn').onclick = window.logout;
-
-onAuthStateChanged(auth, (user) => {
-    if (user) {
-        currentUser = user;
-        isGuestMode = false;
-        authScreen.style.display = 'none';
-        appContainer.style.display = 'block';
-        document.getElementById('userNameDisplay').textContent = `Hola, ${user.displayName.split(' ')[0]}`;
-        startListeningTasks(user.uid);
-    }
+onAuthStateChanged(auth, user => {
+    if (user) { currentUser = user; isGuest = false; updateUI(); listenTasks(); }
 });
 
-function startListeningTasks(uid) {
-    const q = query(collection(db, "tareas"), where("userId", "==", uid), orderBy("createdAt", "desc"));
-    unsubscribeTasks = onSnapshot(q, (snapshot) => {
-        allTasks = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+function updateUI() {
+    document.getElementById('authScreen').style.display = 'none';
+    document.getElementById('appContainer').style.display = 'block';
+    document.getElementById('userNameDisplay').textContent = isGuest ? "Invitado" : `Hola, ${currentUser.displayName.split(' ')[0]}`;
+}
+
+// --- TAREAS ---
+function listenTasks() {
+    const q = query(collection(db, "tareas"), where("userId", "==", currentUser.uid), orderBy("createdAt", "desc"));
+    onSnapshot(q, snap => {
+        tasks = snap.docs.map(d => ({ id: d.id, ...d.data() }));
         render();
     });
 }
 
-// --- 2. GESTIÓN DE TAREAS ---
-
 window.addTask = async () => {
-    const text = taskInput.value.trim();
-    if (!text) return;
-
-    const priority = document.getElementById('priorityInput').value;
-    const category = document.getElementById('categoryInput').value;
-    const dueDate = document.getElementById('dateInput').value;
-
-    if (isGuestMode) {
-        const newTask = { id: Date.now().toString(), text, priority, category, dueDate, completed: false };
-        guestTasks.unshift(newTask);
-        localStorage.setItem('guest_tasks', JSON.stringify(guestTasks));
-        taskInput.value = '';
-        render();
-    } else {
-        await addDoc(collection(db, "tareas"), {
-            text, userId: currentUser.uid, priority, category, dueDate,
-            completed: false, createdAt: serverTimestamp()
-        });
-        taskInput.value = '';
-    }
+    const val = document.getElementById('taskInput').value;
+    if (!val) return;
+    const taskData = {
+        text: val,
+        priority: document.getElementById('priorityInput').value,
+        category: document.getElementById('categoryInput').value,
+        dueDate: document.getElementById('dateInput').value,
+        completed: false,
+        userId: isGuest ? 'guest' : currentUser.uid,
+        createdAt: isGuest ? Date.now() : serverTimestamp()
+    };
+    if (isGuest) { tasks.unshift({id: Date.now().toString(), ...taskData}); render(); }
+    else { await addDoc(collection(db, "tareas"), taskData); }
+    document.getElementById('taskInput').value = '';
 };
 
-document.getElementById('addBtn').onclick = window.addTask;
-
 window.toggleTask = async (id, status) => {
-    if (isGuestMode) {
-        const task = guestTasks.find(t => t.id === id);
-        if (task) task.completed = !status;
-        localStorage.setItem('guest_tasks', JSON.stringify(guestTasks));
-        render();
-    } else {
-        await updateDoc(doc(db, "tareas", id), { completed: !status });
-    }
+    if (isGuest) { tasks.find(t => t.id === id).completed = !status; render(); }
+    else { await updateDoc(doc(db, "tareas", id), { completed: !status }); }
 };
 
 window.deleteTask = async (id) => {
-    if (!confirm("¿Eliminar tarea?")) return;
-    if (isGuestMode) {
-        guestTasks = guestTasks.filter(t => t.id !== id);
-        localStorage.setItem('guest_tasks', JSON.stringify(guestTasks));
-        render();
-    } else {
-        await deleteDoc(doc(db, "tareas", id));
-    }
+    if (!confirm("¿Borrar?")) return;
+    if (isGuest) { tasks = tasks.filter(t => t.id !== id); render(); }
+    else { await deleteDoc(doc(db, "tareas", id)); }
 };
 
-// --- 3. RENDERIZADO Y FILTROS ---
-
+// --- RENDER & GRÁFICO ---
 function render() {
     taskList.innerHTML = '';
-    const source = isGuestMode ? guestTasks : allTasks;
-    
-    const filtered = source.filter(t => {
-        if (currentFilter === 'pending') return t.completed === false;
-        if (currentFilter === 'completed') return t.completed === true;
+    const filtered = tasks.filter(t => {
+        if (currentFilter === 'pending') return !t.completed;
+        if (currentFilter === 'completed') return t.completed;
         return true;
     });
 
-    filtered.forEach(task => {
-        const item = document.createElement('li');
-        item.dataset.priority = task.priority;
-        if (task.completed) item.classList.add('is-completed');
-
-        item.innerHTML = `
-            <div style="margin-right: 15px; cursor:pointer; font-size:1.2rem;" onclick="toggleTask('${task.id}', ${task.completed})">
-                ${task.completed ? '✅' : '⭕'}
-            </div>
+    filtered.forEach(t => {
+        const li = document.createElement('li');
+        li.className = `task-item ${t.completed ? 'is-completed' : ''}`;
+        li.dataset.priority = t.priority;
+        li.innerHTML = `
+            <input type="checkbox" ${t.completed ? 'checked' : ''} onclick="toggleTask('${t.id}', ${t.completed})">
             <div style="flex:1">
-                <small style="text-transform:uppercase; font-size:0.6rem; font-weight:bold; color:var(--accent-color)">${task.category}</small>
-                <div style="font-weight:500">${task.text}</div>
-                ${task.dueDate ? `<small>📅 ${task.dueDate}</small>` : ''}
+                <strong>${t.text}</strong><br>
+                <small>${t.category} | ${t.dueDate || 'Sin fecha'}</small>
             </div>
-            <button onclick="openPomodoro('${task.text.replace(/'/g, "\\'")}')" style="background:none; border:none; cursor:pointer; margin-right:10px;">⏱️</button>
-            <button onclick="deleteTask('${task.id}')" style="background:none; border:none; color:var(--danger); cursor:pointer;">✕</button>
+            <button onclick="deleteTask('${t.id}')">✕</button>
         `;
-        taskList.appendChild(item);
+        taskList.appendChild(li);
     });
-    
-    updateProgress(source);
-    
-    // Mostrar estado vacío
-    document.getElementById('emptyState').style.display = filtered.length === 0 ? 'block' : 'none';
+    updateProgress();
 }
 
-// Configurar los botones de filtro
+function updateProgress() {
+    const total = tasks.length;
+    const done = tasks.filter(t => t.completed).length;
+    const percent = total === 0 ? 0 : Math.round((done / total) * 100);
+    
+    const radius = 24;
+    const circum = 2 * Math.PI * radius;
+    progressCircle.style.strokeDasharray = circum;
+    progressCircle.style.strokeDashoffset = circum - (percent / 100) * circum;
+    progressText.textContent = `${percent}%`;
+}
+
+// --- EVENTOS ---
+document.getElementById('googleLoginBtn').onclick = window.login;
+document.getElementById('guestBtn').onclick = window.enterGuest;
+document.getElementById('logoutBtn').onclick = window.logout;
+document.getElementById('addBtn').onclick = window.addTask;
+
 document.querySelectorAll('.filter-btn').forEach(btn => {
     btn.onclick = (e) => {
         document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
@@ -175,52 +131,3 @@ document.querySelectorAll('.filter-btn').forEach(btn => {
         render();
     };
 });
-
-function updateProgress(tasks) {
-    const total = tasks.length;
-    const comp = tasks.filter(t => t.completed).length;
-    const per = total === 0 ? 0 : Math.round((comp / total) * 100);
-    const circ = document.querySelector('.progress-ring__circle');
-    const circum = 24 * 2 * Math.PI;
-    circ.style.strokeDashoffset = circum - (per / 100) * circum;
-    document.getElementById('progressText').textContent = `${per}%`;
-}
-
-// --- POMODORO ---
-let timeLeft = 25 * 60, timerId = null;
-window.openPomodoro = (name) => {
-    document.getElementById('pomodoroTaskName').textContent = name;
-    document.getElementById('pomodoroModal').style.display = 'flex';
-};
-
-document.getElementById('startTimerBtn').onclick = function() {
-    if (timerId) {
-        clearInterval(timerId); timerId = null; this.textContent = "Reanudar";
-    } else {
-        this.textContent = "Pausar";
-        timerId = setInterval(() => {
-            timeLeft--;
-            const m = Math.floor(timeLeft / 60), s = timeLeft % 60;
-            document.getElementById('timerDisplay').textContent = `${m}:${s < 10 ? '0'+s : s}`;
-            if (timeLeft <= 0) { clearInterval(timerId); alert("¡Tiempo terminado!"); }
-        }, 1000);
-    }
-};
-
-document.getElementById('closePomodoroBtn').onclick = () => {
-    document.getElementById('pomodoroModal').style.display = 'none';
-    clearInterval(timerId); timerId = null; timeLeft = 25 * 60;
-    document.getElementById('timerDisplay').textContent = "25:00";
-};
-
-// Inicializar Tema
-const themeToggle = document.getElementById('themeToggle');
-themeToggle.onclick = () => {
-    const theme = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
-    document.documentElement.setAttribute('data-theme', theme);
-    localStorage.setItem('app_theme', theme);
-    themeToggle.textContent = theme === 'dark' ? '☀️' : '🌙';
-};
-const savedTheme = localStorage.getItem('app_theme') || 'light';
-document.documentElement.setAttribute('data-theme', savedTheme);
-themeToggle.textContent = savedTheme === 'dark' ? '☀️' : '🌙';
